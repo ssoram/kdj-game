@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFF176">
+<title>두더지 잡기 🐭</title>
+<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;두더지 잡기&quot;,&quot;short_name&quot;:&quot;두더지&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%23FFF9C4&quot;,&quot;theme_color&quot;:&quot;%23FFF176&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🐭%3C/text%3E%3C/svg%3E&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
+<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
+
+<style>
+
+
+  @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sky: #FFF9C4;
+    --ground: #8D6E63;
+    --ground-top: #6D4C41;
+    --accent: #FF6F00;
+    --hole-dark: #3E2723;
+    --hole-mid: #5D4037;
+    --green: #388E3C;
+    --grass: #4CAF50;
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  body {
+    background: linear-gradient(180deg, #87CEEB 0%, #B3E5FC 40%, #E1F5FE 60%, #FFF9C4 100%);
+    font-family: 'Jua', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Sky decoration */
+  .cloud {
+    position: fixed;
+    background: white;
+    border-radius: 50px;
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .cloud::before, .cloud::after {
+    content: '';
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+  }
+  .cloud1 { width: 80px; height: 28px; top: 8%; left: 5%; animation: drift 18s linear infinite; }
+  .cloud1::before { width: 40px; height: 40px; top: -20px; left: 10px; }
+  .cloud1::after { width: 30px; height: 30px; top: -14px; left: 35px; }
+  .cloud2 { width: 100px; height: 32px; top: 16%; right: 8%; animation: drift 24s linear infinite reverse; }
+  .cloud2::before { width: 50px; height: 50px; top: -24px; left: 12px; }
+  .cloud2::after { width: 36px; height: 36px; top: -18px; left: 52px; }
+  .cloud3 { width: 60px; height: 22px; top: 5%; left: 50%; animation: drift 20s linear infinite; }
+  .cloud3::before { width: 32px; height: 32px; top: -16px; left: 8px; }
+  .cloud3::after { width: 26px; height: 26px; top: -12px; left: 28px; }
+  @keyframes drift { from { transform: translateX(-20px); } to { transform: translateX(20px); } }
+
+  /* Main container */
+  .game-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    padding: 12px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Title */
+  .title {
+    font-size: 2rem;
+    color: #5D4037;
+    text-shadow: 2px 2px 0 #FFD54F, 4px 4px 0 rgba(0,0,0,0.1);
+    letter-spacing: 2px;
+    animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes bounce-in { from { transform: scale(0.5) translateY(-20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+  /* Stat bar */
+  .stats {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    justify-content: center;
+  }
+  .stat {
+    background: rgba(255,255,255,0.85);
+    border: 3px solid #A1887F;
+    border-radius: 16px;
+    padding: 6px 14px;
+    text-align: center;
+    flex: 1;
+    max-width: 110px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.12);
+  }
+  .stat-label {
+    font-size: 10px;
+    color: #8D6E63;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .stat-value {
+    font-size: 1.6rem;
+    color: #4E342E;
+    line-height: 1;
+  }
+  .stat-value.score-pop {
+    animation: pop 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.4); color: #FF6F00; } 100% { transform: scale(1); } }
+
+  /* Timer bar */
+  .timer-track {
+    width: 100%;
+    height: 14px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 99px;
+    border: 2px solid #A1887F;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF6F00, #FFC107);
+    border-radius: 99px;
+    transition: width 0.9s linear, background 0.5s;
+  }
+  .timer-fill.danger {
+    background: linear-gradient(90deg, #D32F2F, #FF5722);
+    animation: pulse-bar 0.5s infinite;
+  }
+  @keyframes pulse-bar { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+  /* Level badge */
+  .level-badge {
+    font-size: 13px;
+    color: #5D4037;
+    background: rgba(255,255,255,0.7);
+    border-radius: 99px;
+    padding: 3px 14px;
+    border: 2px solid #BCAAA4;
+  }
+
+  /* Ground / game area */
+  .ground-area {
+    width: 100%;
+    background: linear-gradient(180deg, #8BC34A 0%, #689F38 18px, #8D6E63 18px, #6D4C41 100%);
+    border-radius: 20px;
+    border: 3px solid #5D4037;
+    padding: 18px 12px 14px;
+    box-shadow: 0 6px 0 #4E342E, 0 8px 16px rgba(0,0,0,0.2);
+  }
+
+  /* Grass blades */
+  .grass-row {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+  .grass-blade {
+    width: 8px;
+    height: 14px;
+    background: #4CAF50;
+    border-radius: 50% 50% 0 0;
+    transform-origin: bottom;
+  }
+  .grass-blade:nth-child(odd) { height: 18px; background: #66BB6A; transform: rotate(-8deg); }
+  .grass-blade:nth-child(3n) { height: 12px; background: #81C784; transform: rotate(6deg); }
+
+  /* Holes grid */
+  .holes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .hole-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .hole {
+    width: 100%;
+    aspect-ratio: 1;
+    background: radial-gradient(ellipse at center, #1A0A00 0%, #3E2723 50%, #5D4037 100%);
+    border-radius: 50%;
+    border: 3px solid #3E2723;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.6), 0 3px 0 #4E342E;
+    transition: transform 0.08s;
+  }
+
+  .hole:active { transform: scale(0.95); }
+
+  .mole {
+    font-size: clamp(32px, 9vw, 44px);
+    line-height: 1;
+    position: absolute;
+    bottom: -110%;
+    transition: bottom 0.15s cubic-bezier(0.34,1.2,0.64,1);
+    filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.4));
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .mole.up { bottom: 0%; }
+
+  .mole.whacked {
+    animation: whack-anim 0.25s ease-out forwards;
+  }
+  @keyframes whack-anim {
+    0% { transform: scale(1) rotate(0deg); }
+    30% { transform: scale(1.4) rotate(-15deg); filter: brightness(1.5) drop-shadow(0 0 8px #FFD700); }
+    100% { transform: scale(0.5) rotate(20deg); opacity: 0; bottom: -110%; }
+  }
+
+  /* Hit flash overlay */
+  .hit-flash {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,220,0,0.7) 0%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .hit-flash.show {
+    animation: flash-anim 0.3s ease-out forwards;
+  }
+  @keyframes flash-anim { from { opacity: 1; transform: scale(0.8); } to { opacity: 0; transform: scale(1.3); } }
+
+  /* Hit score popup */
+  .score-popup {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.6rem;
+    color: #FFD600;
+    text-shadow: 2px 2px 0 #E65100;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    font-family: 'Jua', sans-serif;
+  }
+  .score-popup.show {
+    animation: score-fly 0.6s ease-out forwards;
+  }
+  @keyframes score-fly {
+    0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(0.8); }
+    60% { opacity: 1; transform: translateX(-50%) translateY(-30px) scale(1.2); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-50px) scale(1); }
+  }
+
+  /* Message */
+  .game-msg {
+    font-size: 1rem;
+    color: #5D4037;
+    min-height: 24px;
+    text-align: center;
+    text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+  }
+
+  /* Button */
+  .start-btn {
+    font-family: 'Jua', sans-serif;
+    font-size: 1.2rem;
+    padding: 12px 32px;
+    background: linear-gradient(180deg, #FF8F00 0%, #FF6F00 100%);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 5px 0 #E65100, 0 7px 14px rgba(0,0,0,0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+    letter-spacing: 1px;
+  }
+  .start-btn:hover { filter: brightness(1.05); }
+  .start-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #E65100; }
+  .start-btn:disabled { background: linear-gradient(180deg, #BDBDBD, #9E9E9E); box-shadow: 0 5px 0 #757575; cursor: not-allowed; }
+
+  /* End screen */
+  .end-screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .end-screen.show { display: flex; }
+  .end-card {
+    background: linear-gradient(160deg, #FFFDE7, #FFF9C4);
+    border-radius: 24px;
+    border: 4px solid #FFD54F;
+    padding: 28px 32px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 8px rgba(255,213,79,0.2);
+    animation: card-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    max-width: 300px;
+    width: 90%;
+  }
+  @keyframes card-in { from { transform: scale(0.6) rotate(-6deg); opacity: 0; } to { transform: scale(1) rotate(0deg); opacity: 1; } }
+  .end-emoji { font-size: 3.5rem; display: block; margin-bottom: 8px; }
+  .end-title { font-size: 1.6rem; color: #4E342E; margin-bottom: 6px; }
+  .end-score { font-size: 2.8rem; color: #FF6F00; margin-bottom: 4px; }
+  .end-score span { font-size: 1rem; color: #8D6E63; }
+  .end-best { font-size: 0.95rem; color: #8D6E63; margin-bottom: 16px; }
+  .end-rank { font-size: 1.1rem; color: #5D4037; background: rgba(255,213,79,0.4); border-radius: 12px; padding: 6px 12px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<div class="cloud cloud1"></div>
+<div class="cloud cloud2"></div>
+<div class="cloud cloud3"></div>
+
+<div class="game-container">
+  <div class="title">🐭 두더지 잡기!</div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-label">점수</span>
+      <span class="stat-value" id="score">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">남은 시간</span>
+      <span class="stat-value" id="timer">30</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">최고기록</span>
+      <span class="stat-value" id="best">0</span>
+    </div>
+  </div>
+
+  <div class="timer-track">
+    <div class="timer-fill" id="timerFill" style="width:100%"></div>
+  </div>
+  <div class="level-badge" id="levelBadge">🌱 레벨 1</div>
+
+  <div class="ground-area">
+    <div class="grass-row" id="grassRow"></div>
+    <div class="holes-grid" id="holesGrid"></div>
+  </div>
+
+  <div class="game-msg" id="gameMsg">버튼을 눌러서 시작해요!</div>
+  <button class="start-btn" id="startBtn" onclick="startGame()">게임 시작 🎮</button>
+</div>
+
+<!-- End screen -->
+<div class="end-screen" id="endScreen">
+  <div class="end-card">
+    <span class="end-emoji" id="endEmoji">🎉</span>
+    <div class="end-title">게임 끝!</div>
+    <div class="end-score" id="endScore">0<span>마리</span></div>
+    <div class="end-best" id="endBest">최고기록: 0마리</div>
+    <div class="end-rank" id="endRank">잘했어요!</div>
+    <button class="start-btn" onclick="closeEnd(); startGame();">다시 도전! 🔄</button>
+  </div>
+</div>
+
+<script>
+const TOTAL = 30;
+const MOLES = ['🐭','🦔','🐹','🐀','🐾'];
+const MSGS = ['잘했어요! 👏','굿! 👍','짝!','최고!','완벽!','대박!','와우!'];
+const RANKS = [
+  { min: 25, emoji: '🏆', msg: '두더지 마스터!' },
+  { min: 18, emoji: '🥇', msg: '엄청 잘해요!' },
+  { min: 12, emoji: '🎉', msg: '잘했어요!' },
+  { min: 7,  emoji: '👍', msg: '좋아요!' },
+  { min: 0,  emoji: '💪', msg: '다시 도전!' }
+];
+
+let score = 0, best = +localStorage.getItem('mole_best') || 0, timeLeft = TOTAL;
+let running = false, moleTimers = [], mainTimer = null;
+let activeMoles = new Set();
+
+const scoreEl = document.getElementById('score');
+const timerEl = document.getElementById('timer');
+const bestEl = document.getElementById('best');
+const timerFill = document.getElementById('timerFill');
+const levelBadge = document.getElementById('levelBadge');
+const gameMsg = document.getElementById('gameMsg');
+const startBtn = document.getElementById('startBtn');
+const endScreen = document.getElementById('endScreen');
+
+bestEl.textContent = best;
+
+// Build grass
+const grassRow = document.getElementById('grassRow');
+for (let i = 0; i < 18; i++) {
+  const b = document.createElement('div');
+  b.className = 'grass-blade';
+  grassRow.appendChild(b);
+}
+
+// Build holes
+const holesGrid = document.getElementById('holesGrid');
+for (let i = 0; i < 9; i++) {
+  const wrap = document.createElement('div');
+  wrap.className = 'hole-wrap';
+  wrap.innerHTML = `
+    <div class="hole" id="hole-${i}">
+      <span class="mole" id="mole-${i}">🐭</span>
+      <div class="hit-flash" id="flash-${i}"></div>
+      <div class="score-popup" id="popup-${i}">+1</div>
+    </div>
+  `;
+  wrap.addEventListener('click', () => whack(i));
+  wrap.addEventListener('touchstart', e => { e.preventDefault(); whack(i); }, { passive: false });
+  holesGrid.appendChild(wrap);
+}
+
+function getLevel() {
+  const elapsed = TOTAL - timeLeft;
+  if (elapsed < 10) return 1;
+  if (elapsed < 20) return 2;
+  return 3;
+}
+
+function getConfig() {
+  const lv = getLevel();
+  if (lv === 1) return { showMs: 1500, maxActive: 1, interval: 1200 };
+  if (lv === 2) return { showMs: 1100, maxActive: 2, interval: 900 };
+  return { showMs: 750, maxActive: 3, interval: 650 };
+}
+
+function spawnMole() {
+  if (!running) return;
+  const { showMs, maxActive, interval } = getConfig();
+  if (activeMoles.size < maxActive) {
+    let idx, tries = 0;
+    do { idx = Math.floor(Math.random() * 9); tries++; } while (activeMoles.has(idx) && tries < 30);
+    if (!activeMoles.has(idx)) {
+      activeMoles.add(idx);
+      const moleEl = document.getElementById('mole-' + idx);
+      moleEl.textContent = MOLES[Math.floor(Math.random() * MOLES.length)];
+      moleEl.classList.remove('whacked');
+      moleEl.classList.add('up');
+      const t = setTimeout(() => { if (activeMoles.has(idx)) hideMole(idx); }, showMs);
+      moleTimers.push(t);
+    }
+  }
+  moleTimers.push(setTimeout(spawnMole, interval + Math.random() * 300));
+}
+
+function hideMole(idx) {
+  const moleEl = document.getElementById('mole-' + idx);
+  moleEl.classList.remove('up', 'whacked');
+  activeMoles.delete(idx);
+}
+
+function whack(idx) {
+  if (!running || !activeMoles.has(idx)) return;
+  score++;
+  const el = scoreEl;
+  el.textContent = score;
+  el.classList.remove('score-pop');
+  void el.offsetWidth;
+  el.classList.add('score-pop');
+
+  const moleEl = document.getElementById('mole-' + idx);
+  const flashEl = document.getElementById('flash-' + idx);
+  const popupEl = document.getElementById('popup-' + idx);
+
+  moleEl.classList.remove('up');
+  moleEl.classList.add('whacked');
+  flashEl.classList.remove('show');
+  void flashEl.offsetWidth;
+  flashEl.classList.add('show');
+  popupEl.classList.remove('show');
+  void popupEl.offsetWidth;
+  popupEl.classList.add('show');
+
+  activeMoles.delete(idx);
+  setTimeout(() => {
+    moleEl.classList.remove('whacked');
+    popupEl.classList.remove('show');
+    flashEl.classList.remove('show');
+  }, 350);
+
+  gameMsg.textContent = MSGS[Math.floor(Math.random() * MSGS.length)];
+}
+
+function startGame() {
+  score = 0; timeLeft = TOTAL;
+  scoreEl.textContent = 0;
+  timerEl.textContent = TOTAL;
+  timerFill.style.width = '100%';
+  timerFill.classList.remove('danger');
+  gameMsg.textContent = '두더지를 잡아라! 🔨';
+  startBtn.textContent = '게임 중...';
+  startBtn.disabled = true;
+  running = true;
+  activeMoles.clear();
+
+  for (let i = 0; i < 9; i++) {
+    document.getElementById('mole-' + i).classList.remove('up', 'whacked');
+    document.getElementById('flash-' + i).classList.remove('show');
+    document.getElementById('popup-' + i).classList.remove('show');
+  }
+
+  moleTimers.forEach(clearTimeout);
+  moleTimers.length = 0;
+  spawnMole();
+
+  mainTimer = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = timeLeft;
+    timerFill.style.width = (timeLeft / TOTAL * 100) + '%';
+    const lv = getLevel();
+    const icons = ['🌱','🌿','🔥'];
+    levelBadge.textContent = icons[lv-1] + ' 레벨 ' + lv;
+    if (timeLeft <= 8) timerFill.classList.add('danger');
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+function endGame() {
+  running = false;
+  clearInterval(mainTimer);
+  moleTimers.forEach(clearTimeout);
+  moleTimers.length = 0;
+  activeMoles.clear();
+  for (let i = 0; i < 9; i++) {
+    document.getElementById('mole-' + i).classList.remove('up', 'whacked');
+  }
+
+  if (score > best) {
+    best = score;
+    localStorage.setItem('mole_best', best);
+    bestEl.textContent = best;
+  }
+
+  const rank = RANKS.find(r => score >= r.min);
+  document.getElementById('endEmoji').textContent = rank.emoji;
+  document.getElementById('endScore').innerHTML = score + '<span>마리</span>';
+  document.getElementById('endBest').textContent = '최고기록: ' + best + '마리';
+  document.getElementById('endRank').textContent = rank.msg;
+  endScreen.classList.add('show');
+
+  startBtn.textContent = '다시 시작 🔄';
+  startBtn.disabled = false;
+  gameMsg.textContent = '게임 끝!';
+}
+
+function closeEnd() {
+  endScreen.classList.remove('show');
+}
+
+// Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'mole-v1';
+    self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(['.']))));
+    self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+</script>
+</body>
+</html>

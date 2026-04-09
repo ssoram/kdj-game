@@ -1,0 +1,15 @@
+{
+  "name": "두더지 잡기",
+  "short_name": "두더지",
+  "start_url": "./whack-a-mole.html",
+  "display": "standalone",
+  "background_color": "#FFF9C4",
+  "theme_color": "#FF6F00",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
